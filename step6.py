@@ -4,6 +4,28 @@ def read_scores_from_file(file_path):
         scores = [float(score.strip()) for score in scores]
     return scores
 
+import pymysql
+
+def recommend_on_score():
+    conn = pymysql.connect(
+        host='10.0.139.42',
+        user='pengu',
+        password='123456',
+        database='dataset'
+    )
+    cursor = conn.cursor()
+    query_flm = "UPDATE flm_results SET colour = CASE WHEN score < 35 THEN 'green' WHEN score >= 35 AND score < 65 THEN 'amber' WHEN score >= 65 THEN 'red' END"
+    query_cfm = "UPDATE cfm_results SET colour = CASE WHEN score < 35 THEN 'green' WHEN score >= 35 AND score < 65 THEN 'amber' WHEN score >= 65 THEN 'red' END"
+    
+    cursor.execute(query_flm)
+    cursor.execute(query_cfm)
+
+    conn.commit()
+    
+    cursor.close()
+    conn.close()
+
+
 def calculate_tp_fp_tn_fn(clean_scores, malicious_scores, threshold):
     tp = sum(score >= threshold for score in malicious_scores)
     fp = sum(score >= threshold for score in clean_scores)
@@ -35,12 +57,13 @@ def calculate_tp_fp_tn_fn(clean_scores, malicious_scores, threshold):
     print("Accurancy:", accuracy)
     print("F-score:", f1_score)
 
+recommend_on_score()
 
-clean_file_path_1 = '/home/kali/Desktop/FileScore/FuzzyLogic/FileScoreClean'  
-malicious_file_path_1 = '/home/kali/Desktop/FileScore/FuzzyLogic/FileScoreMalicious'  
+clean_file_path_1 = 'FileScore/FuzzyLogic/FileScoreClean'  
+malicious_file_path_1 = 'FileScore/FuzzyLogic/FileScoreMalicious'  
 
-clean_file_path_2 = '/home/kali/Desktop/FileScore/CommonFactorMethod/FileScoreClean'  
-malicious_file_path_2 = '/home/kali/Desktop/FileScore/CommonFactorMethod/FileScoreMalicious'  
+clean_file_path_2 = 'FileScore/CommonFactorMethod/FileScoreClean'  
+malicious_file_path_2 = 'FileScore/CommonFactorMethod/FileScoreMalicious'  
 
 GTP = 35  # Ngưỡng 1 để phân loại TP/FP/TN/FN
 ATP = 65  # Ngưỡng 2 để phân loại TP/FP/TN/FN

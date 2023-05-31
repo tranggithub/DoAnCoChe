@@ -6,8 +6,8 @@ import pefile
 import pehash
 import glob
 
-CLEAN_FOLDER_PATH = "./1000_third_files/clean_files_3"
-MALICIOUS_FOLDER_PATH = "./1000_third_files/infected_files_3"
+CLEAN_FOLDER_PATH = "1000_third_files/clean_files_3"
+MALICIOUS_FOLDER_PATH = "1000_third_files/infected_files_3"
 IM_DB_PATH = "imph.txt"
 PE_DB_PATH = "peh.txt"
 SH_DB_PATH = "sdh.txt"
@@ -145,15 +145,37 @@ def getCombineMethodTheCertaintyFactorModel(ESF):
     result = TheCertaintyFactorModel(ESF[0], ESF[1])
     result = TheCertaintyFactorModel(result, ESF[2])
     return TheCertaintyFactorModel(result, ESF[3])
+
+def insert_score_to_database(filename, score, flag):
+    conn = pymysql.connect(
+        host='10.0.139.42',
+        user='pengu',
+        password='123456',
+        database='dataset'
+    )
+    cursor = conn.cursor()
+    if flag == "flm":
+        query = "INSERT INTO flm_results (file, score) VALUES (%s, %s) ON DUPLICATE KEY UPDATE score = %s"
+    else:
+        query = "INSERT INTO cfm_results (file, score) VALUES (%s, %s) ON DUPLICATE KEY UPDATE score = %s"
+    values = (filename, score, score)
+    cursor.execute(query, values)
+    
+    conn.commit()
+    
+    cursor.close()
+    conn.close()
     
 def CombinationApproach(files, lable):
     global FILESCORE_FUZZYLOGIC_CLEAN, FILESCORE_COMMONFACTORMETHOD_CLEAN, FILESCORE_FUZZYLOGIC_MALICIOUS, FILESCORE_COMMONFACTORMETHOD_MALICIOUS
+    
     # Duyệt qua từng tệp tin trong danh sách
     for file_path in files:
         #Gọi ra từng tập tin trong dataset 3
         if os.path.isfile(file_path):  # Kiểm tra nếu là tệp tin
             # Khởi tạo ESF ban đầu cho từng loại hash là 0; [Imp, Pe, Sd, RSd] 
             ESF = [0, 0, 0, 0]
+            filename = os.path.basename(file_path)
             #print(file_path)
             # Thực hiện các thao tác với tệp tin
             md5_result = calculate_md5(file_path)
@@ -168,14 +190,21 @@ def CombinationApproach(files, lable):
             cal_ESF_Sd_RSd(sd_result,SH_DB_PATH,ESF)
             cal_ESF_Sd_RSd(rsd_result,RSH_DB_PATH,ESF)
             #print(ESF)
-            ESF_FuzzyLogic = getCombineMethodFuzzyLogic(ESF) * 100
-            ESF_TheCertaintyFactorModel = getCombineMethodTheCertaintyFactorModel(ESF) * 100
+            ESF_FuzzyLogic = "{:.1f}".format(getCombineMethodFuzzyLogic(ESF) * 100)
+            insert_score_to_database(filename, ESF_FuzzyLogic, "flm")
+
+            ESF_TheCertaintyFactorModel = "{:.1f}".format(getCombineMethodTheCertaintyFactorModel(ESF) * 100)
+            insert_score_to_database(filename, ESF_TheCertaintyFactorModel, "cfm")
+
             if (lable == "clean"):
-                FILESCORE_FUZZYLOGIC_CLEAN = FILESCORE_FUZZYLOGIC_CLEAN + "{:.1f}".format(ESF_FuzzyLogic) + "\n"
-                FILESCORE_COMMONFACTORMETHOD_CLEAN = FILESCORE_COMMONFACTORMETHOD_CLEAN + ("{:.1f}".format(ESF_TheCertaintyFactorModel) + "\n")
+                FILESCORE_FUZZYLOGIC_CLEAN = FILESCORE_FUZZYLOGIC_CLEAN + (ESF_FuzzyLogic + "\n")
+                FILESCORE_COMMONFACTORMETHOD_CLEAN = FILESCORE_COMMONFACTORMETHOD_CLEAN + (ESF_TheCertaintyFactorModel + "\n")
+                
             else:
-                FILESCORE_FUZZYLOGIC_MALICIOUS = FILESCORE_FUZZYLOGIC_MALICIOUS + ("{:.1f}".format(ESF_FuzzyLogic) + "\n")
-                FILESCORE_COMMONFACTORMETHOD_MALICIOUS = FILESCORE_COMMONFACTORMETHOD_MALICIOUS + ("{:.1f}".format(ESF_TheCertaintyFactorModel) + "\n")
+                FILESCORE_FUZZYLOGIC_MALICIOUS = FILESCORE_FUZZYLOGIC_MALICIOUS + (ESF_FuzzyLogic + "\n")
+                FILESCORE_COMMONFACTORMETHOD_MALICIOUS = FILESCORE_COMMONFACTORMETHOD_MALICIOUS + (ESF_TheCertaintyFactorModel + "\n")
+            
+            print("Save score for", filename)
 
 # Sử dụng pattern "*" để lấy danh sách tất cả các tệp tin trong thư mục
 files = glob.glob(CLEAN_FOLDER_PATH + "/*")
@@ -192,34 +221,3 @@ with open(FILESCORE_COMMONFACTORMETHOD_CLEAN_PATH , "w") as file:
     file.write(FILESCORE_COMMONFACTORMETHOD_CLEAN)
 with open(FILESCORE_COMMONFACTORMETHOD_MALICIOUS_PATH , "w") as file:
     file.write(FILESCORE_COMMONFACTORMETHOD_MALICIOUS)
-
-      
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-
